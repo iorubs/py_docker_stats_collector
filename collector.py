@@ -20,7 +20,7 @@ def read_args():
     args = parser.parse_args()
     
     if args.time_frame != None:
-        ARGS['time_frame'] = args.time_frame
+        ARGS['time_frame'] = args.time_frame[0]
 
     if args.home_dir != None:
         ARGS['home_dir'] = args.home_dir[0]
