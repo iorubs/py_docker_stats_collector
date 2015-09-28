@@ -1,23 +1,43 @@
 #!/usr/bin/python
 """
-Container stats pulled from /sys/fs/cgroup,
-Graphs created using :
+This tool gathers and saves Container stats pulled from /sys/fs/cgroup,
+in a mysql db.
 """
 
+import argparse
 import subprocess
 import MySQLdb as mdb
 import os
 import time
 import sys
 
-#bash table_drop.sh collector GetMe2ome2t@t2 docker_stats
+ARGS = {'time_frame': 0.01, 'mode': 'collect', 'db_user': 'collector',
+        'db_password': 'GetMe2ome2t@t2', 'db_location': 'localhost',
+        'db_name': 'docker_stats', 'container_id': ''}
 
+def read_args():
+    """
+    Read in arguments passed in by user
+    """
 
-ARGS = {'time_frame': 0.01, 'mode': 'collect'}
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', '-m', nargs=1, dest='mode', type=str, required=False, help='Mode type (collect or analyse)')
+    parser.add_argument('--container-id', '-id', nargs=1, dest='container_id', type=str, required=False, help='Enter container ID')
+    args = parser.parse_args()
+    
+    if args.mode != None:
+        ARGS['mode'] = args.mode[0]
+
+        if ARGS['mode'] == 'analyse' and args.container_id != None:
+            ARGS['container_id'] = args.container_id[0]
+        elif ARGS['mode'] == 'analyse':
+            print 'You have to supply a container ID.'
 
 
 def get_docker_ids():
-    """Get long docker Container id's"""
+    """
+    Get long docker Container id's
+    """
 
     docker_ids = []
 
@@ -30,8 +50,10 @@ def get_docker_ids():
     return docker_ids
 
 def get_cpu_usage(docker_id):
-    """Collect container cpu usage data for each running continer,
-    /sys/fs/cgroup/cpuacct/docker/$CONTAINER_ID/cpuacct.usage"""
+    """
+    Collect container cpu usage data for each running continer,
+    /sys/fs/cgroup/cpuacct/docker/$CONTAINER_ID/cpuacct.usage
+    """
 
     location  = '/sys/fs/cgroup/cpuacct/docker/'
     data_file = '/cpuacct.usage'
@@ -50,8 +72,10 @@ def get_cpu_usage(docker_id):
 
 
 def get_core_usage(docker_id):
-    """Collect individual core usage data for each running continer,
-    /sys/fs/cgroup/cpuacct/docker/$CONTAINER_ID/cpuacct.usage_percpu"""
+    """
+    Collect individual core usage data for each running continer,
+    /sys/fs/cgroup/cpuacct/docker/$CONTAINER_ID/cpuacct.usage_percpu
+    """
 
     location  = '/sys/fs/cgroup/cpuacct/docker/'
     data_file = '/cpuacct.usage_percpu'
@@ -73,10 +97,12 @@ def get_core_usage(docker_id):
 
 
 def get_memory_usage(docker_id):
-    """Collect memory usage data for each running container,
-    /sys/fs/cgroup/memory/docker/$CONTAINER_ID/memory.usage_in_bytes"""
+    """
+    Collect memory usage data for each running container,
+    /sys/fs/cgroup/memory/docker/$CONTAINER_ID/memory.usage_in_bytes
+    """
 
-    location  = 'cat /sys/fs/cgroup/memory/docker/'
+    location  = '/sys/fs/cgroup/memory/docker/'
     data_file = '/memory.usage_in_bytes'
 
     command = location + docker_id + data_file
@@ -93,17 +119,41 @@ def get_memory_usage(docker_id):
 
     return -1
 
-def get_ram_usage(docker_ids):
-    """"""
+def get_ram_usage(docker_id):
+    """
+    Collect ram usage data for each running container
+    """
+    pass
 
+def empty_db():
+    """
+    Drop all existing tables in the db,
+    this runs once before collecting new data.
+    """
 
-def main():
-    """Main method call helper fuctions"""
+    drop_tables = "sudo bash table_drop.sh " + ARGS['db_user'] + ' ' \
+                  + ARGS['db_password'] + ' ' + ARGS['db_name']
+    proc = subprocess.Popen(drop_tables, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    out, _ = proc.communicate()
 
-    con = mdb.connect('localhost', 'collector', 'GetMe2ome2t@t2', 'docker_stats');
+    print out
+
+    retval = proc.wait()
+
+    return retval
+
+def collect_data():
+    """
+    Run in a loop collecting container stats
+    """
+    
+    empty_db()
+
+    con = mdb.connect(ARGS['db_location'], ARGS['db_user'], ARGS['db_password'], ARGS['db_name']);
 
     with con:
         cur = con.cursor()
+        print 'Running ...'
         try:
             while True:
                 docker_ids = get_docker_ids()
@@ -113,14 +163,48 @@ def main():
                     cpu_data = get_cpu_usage(id)
                     core_data = get_core_usage(id)
                     memory_data = get_memory_usage(id)
-                    #ram_data = get_ram_usage(id)
+                    ram_data = get_ram_usage(id)
 
-                    if cpu_data != -1 and core_data != -1 and memory_data != -1:
-                        insert = "INSERT INTO " + str(id) + "(Cpu,Core1,Core2,Core3,Core4,Memory,Ram) VALUES(" + str(cpu_data) + "," + core_data[0] + "," + core_data[1] + "," + core_data[2] + "," + core_data[3] + "," + str(memory_data) + ",0)"
+                    if cpu_data != -1 and core_data != -1 and memory_data != -1 and ram_data != -1:
+                        insert = "INSERT INTO " + str(id) + "(Cpu,Core1,Core2,Core3,Core4,Memory,Ram) VALUES(" + str(cpu_data) + "," + core_data[0] + "," + core_data[1] + "," + core_data[2] + "," + core_data[3] + "," + str(memory_data) + ",00000)"
                         cur.execute(insert)
                 time.sleep(ARGS['time_frame'])
         except KeyboardInterrupt:
             print "Exiting"
             sys.exit()
+
+
+def analyse_data():
+    """
+    Retrieve container's stats
+    """
+    con = mdb.connect(ARGS['db_location'], ARGS['db_user'], ARGS['db_password'], ARGS['db_name']);
+
+    with con: 
+        cur = con.cursor()
+        cur.execute("SELECT * FROM " + ARGS['container_id'])
+
+        rows = cur.fetchall()
+
+        print "(T - Cpu - Core1 - Core2 - Core3 - Core4 - Memory - Ram)"
+        for row in rows:
+            print row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7] 
+
+
+def main():
+    """
+    Main method call helper fuctions
+    """
+
+    read_args()
+
+
+    if ARGS['mode'] == 'collect':
+        collect_data()
+    elif ARGS['mode'] == 'analyse':
+        analyse_data()
+    else:
+        print ARGS['mode'] + ' is not a valid mode.'
+
 
 main()
