@@ -16,19 +16,19 @@ Collector mode: python collector.py
 
 Analyser mode: python collector.py -m 'analyse' -id $(container_id)  
 
-Example output:
-(T - Cpu - Core1 - Core2 - Core3 - Core4 - Memory - Ram)
-1 15868738 4168148 8452622 1585063 1662905 544768 0
-2 15868738 4168148 8452622 1585063 1662905 544768 0
-3 15868738 4168148 8452622 1585063 1662905 544768 0
-4 15868738 4168148 8452622 1585063 1662905 544768 0
+Example output:  
+(T - Cpu - Core1 - Core2 - Core3 - Core4 - Memory - Ram)  
+1 15868738 4168148 8452622 1585063 1662905 544768 0  
+2 15868738 4168148 8452622 1585063 1662905 544768 0  
+3 15868738 4168148 8452622 1585063 1662905 544768 0  
+4 15868738 4168148 8452622 1585063 1662905 544768 0  
 
 
 T/100 = time since container startup in secons. Ex = if T=1 than time in secs = 0.01
 
 All other values are in bytes.
 
-TODO and more INFO:  
+TODO and more INFO: 
 the ram stats collecting fuction needs to be implemented.
 
 
