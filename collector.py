@@ -125,12 +125,6 @@ def get_memory_usage(docker_id):
 
     return -1
 
-def get_ram_usage(docker_id):
-    """
-    Collect ram usage data for each running container
-    """
-    pass
-
 def empty_db():
     """
     Drop all existing tables in the db,
@@ -168,19 +162,18 @@ def collect_data():
                 for container_id in docker_ids:
                     create = "CREATE TABLE IF NOT EXISTS " + str(container_id) \
                     + "(Id INT PRIMARY KEY AUTO_INCREMENT, Cpu INT, Core1 INT" \
-                    + ", Core2 INT, Core3 INT, Core4 INT, Memory INT, Ram INT)"
+                    + ", Core2 INT, Core3 INT, Core4 INT, Memory INT)"
                     cur.execute(create)
                     cpu_data = get_cpu_usage(container_id)
                     core_data = get_core_usage(container_id)
                     memory_data = get_memory_usage(container_id)
-                    ram_data = get_ram_usage(container_id)
 
-                    if cpu_data != -1 and core_data != -1 and memory_data != -1 and ram_data != -1:
+                    if cpu_data != -1 and core_data != -1 and memory_data != -1:
                         insert = "INSERT INTO " + str(container_id) \
-                        + "(Cpu,Core1,Core2,Core3,Core4,Memory,Ram) VALUES(" \
+                        + "(Cpu,Core1,Core2,Core3,Core4,Memory) VALUES(" \
                         + str(cpu_data) + "," + core_data[0] + "," \
                         + core_data[1] + "," + core_data[2] + "," \
-                        + core_data[3] + "," + str(memory_data) + ",00000)"
+                        + core_data[3] + "," + str(memory_data) + ")"
                         cur.execute(insert)
                 time.sleep(ARGS['time_frame'])
         except KeyboardInterrupt:
@@ -202,9 +195,9 @@ def analyse_data():
 
         rows = cur.fetchall()
 
-        print "(T - Cpu - Core1 - Core2 - Core3 - Core4 - Memory - Ram)"
+        print "(T - Cpu - Core1 - Core2 - Core3 - Core4 - Memory)"
         for row in rows:
-            print row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]
+            print row[0], row[1], row[2], row[3], row[4], row[5], row[6]
 
 
 def main():
