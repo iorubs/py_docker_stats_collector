@@ -121,8 +121,11 @@ def save_data(cpu, core, memory, docker_id):
     """
 
     cores = core.split()
-    entry = cpu + ' ' + cores[0] + ' ' + cores[1] + ' ' \
-            + cores[2] + ' ' + cores[3] + ' ' + memory
+
+    entry = cpu + ' '
+
+    for core in cores:
+        entry = entry + core + ' '
 
     storage_location = ARGS['home_dir'] + '/' + docker_id
     with open(storage_location, "a") as stats_file:
