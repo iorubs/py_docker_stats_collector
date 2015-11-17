@@ -127,6 +127,8 @@ def save_data(cpu, core, memory, docker_id):
     for core in cores:
         entry = entry + core + ' '
 
+    entry = entry + memory
+
     storage_location = ARGS['home_dir'] + '/' + docker_id
     with open(storage_location, "a") as stats_file:
         stats_file.write(str(entry))
